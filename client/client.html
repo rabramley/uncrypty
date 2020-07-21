@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>WebSocket demo</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <div id="app">
+        <div v-if="team_not_chosen">
+            <h1>Please choose a team</h1>
+            <a v-on:click="select_team('A')">Team A</a>
+            <a v-on:click="select_team('B')">Team B</a>
+        </div>
+
+        <div v-else>
+            <h1>Your team is {{ team }}</h1>
+        </div>
+    </div>
+</body>
+
+
+<script src="https://cdn.jsdelivr.net/npm/vue"></script>
+
+<script>
+
+    var app = new Vue({
+            el: '#app',
+            data: {
+                team: null,
+                user_count: 0,
+                connection: null,
+            },
+            computed: {
+                team_not_chosen: function() {
+                    return this.team == null;
+                },
+            },
+            created: function() {
+                console.log("Starting connection to WebSocket Server")
+                this.connection = new WebSocket("ws://127.0.0.1:6789/")
+
+                this.connection.onmessage = function(event) {
+                    console.log(event)
+                    data = JSON.parse(event.data);
+                    switch (data.type) {
+                        case 'state':
+                            app.value = data.value;
+                            break;
+                        case 'users':
+                            app.user_count = data.count;
+                            break;
+                        default:
+                            console.error("unsupported event", data);
+                    }
+                }
+
+                this.connection.onopen = function(event) {
+                    console.log(event)
+                    console.log("Successfully connected to the echo websocket server...")
+                }
+            },
+            methods: {
+                send_message: function(action_type) {
+                    this.connection.send(JSON.stringify({action: action_type}));
+                },
+                select_team: function(team_name) {
+                    console.log('selecting team: ' + team_name)
+                    this.connection.send(JSON.stringify({action: 'select_team', team: team_name}));
+                }
+            }
+        })
+
+</script>
+
+</html>
